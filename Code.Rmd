@@ -41,5 +41,5 @@ First we have to download the data.
 
 ```{r weather_data, cache=TRUE}
 data <- vroom("listings.csv.gz")
-kable(data)
+glimpse(data)
 ```
