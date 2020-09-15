@@ -34,6 +34,13 @@ knitr::opts_chunk$set(
 library(vroom)
 library(dplyr)
 library(knitr)
+library(mosaic)
+library(skimr)
+library(ggplot2)
+library(GGally)
+library(janitor)
+library(readr)
+library(leaflet)
 ```
 
 # Studying he Beijing Airbnb Market
@@ -41,6 +48,150 @@ library(knitr)
 First we have to download the data.
 
 ```{r weather_data, cache=TRUE}
-data <- vroom::vroom("listings.csv.gz")
-glimpse(data)
+data <- vroom::vroom("listings.csv.gz") %>% 
+  clean_names()
+data
 ```
+
+## Exploratory Data Analysis 
+
+```{r}
+# Lets have a look at what we're dealing with!
+glimpse(data)
+
+# Since there is a lot going on, lets compute some summary statistics
+listings <- data %>% 
+  
+  #Lets pick the stuff we need
+  select(c(price,
+           cleaning_fee,
+           extra_people,
+           room_type,
+           property_type,
+           number_of_reviews,
+           review_scores_rating,
+           longitude,
+           latitude,
+           neighbourhood,
+           minimum_nights,
+           guests_included,
+           bathrooms,
+           accommodates,
+           host_is_superhost,
+           neighbourhood_cleansed,
+           cancellation_policy,
+           listing_url
+           )
+         ) %>% 
+
+  #Getting rid of the $'s and getting
+  mutate(
+    price = parse_number(price),
+    cleaning_fee = parse_number(cleaning_fee),
+    extra_people = parse_number(extra_people)
+  )
+
+listings
+```
+
+
+### Removing Missing Values
+
+```{r}
+
+data_cleaned <- listings %>% 
+  
+  # Handling NA's
+  mutate(
+    cleaning_fee = case_when(
+      is.na(cleaning_fee) ~ 0,
+      TRUE ~ cleaning_fee
+    ))
+
+data_cleaned
+
+data_cleaned %>% 
+skim(cleaning_fee)
+```
+
+> Some properties do not have the cleaning fee separately because they include it in the rent price. This way, it is not seen as an "additional cost".
+> #Psychology 
+
+We're figuring out what types of properties we're dealing with
+```{r}
+data_cleaned %>% 
+  count(property_type) %>% 
+  arrange(desc(n))
+
+```
+
+We're now classifying into 6 different groups such that we group the smaller categories under other.
+```{r}
+cleaning <- data_cleaned %>%
+  mutate(prop_type_simplified = case_when(
+    property_type %in% c("Apartment","Condominium", "House","Loft", "Serviced apartment") ~ property_type, 
+    TRUE ~ "Other"
+  ))
+  # %>% 
+  # count(property_type, prop_type_simplified) %>%
+  # arrange(desc(n))  
+
+cleaning
+```
+
+
+
+```{r}
+
+# We want to use log to transform our data into a mroe normal looking distribution of data
+
+cleaning %>% 
+  #filter(minimum_nights <= 4) %>% 
+  ggplot() +
+  geom_density(aes(x = minimum_nights)) +
+  scale_x_log10()
+
+
+cleaning
+
+cleaning %>% 
+  count(minimum_nights) %>% 
+  arrange(desc(n))
+
+favstats(data = cleaning , ~ minimum_nights) 
+```
+
+What are the most common values for the variable minimum_nights?
+Is there any value among the common values that stands out?
+What is the likely intended purpose for Airbnb listings with this seemingly unusual value for minimum_nights?
+Filter the airbnb data so that it only includes observations with minimum_nights <= 4
+
+> The most common values are between 1 to 3 nights.
+
+> Minimum nights over 30 days is rather strange as by this point you're no longer looking to be a tourist and rather live there
+
+>
+
+## Mapping
+
+```{r}
+leaflet(data = filter(cleaning, minimum_nights <= 4)) %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>% 
+  addCircleMarkers(lng = ~longitude, 
+                   lat = ~latitude, 
+                   radius = 1, 
+                   fillColor = "blue", 
+                   fillOpacity = 0.4, 
+                   popup = ~listing_url,
+                   label = ~property_type)
+```
+
+## Regression Analysis
+
+```{r}
+cleaning %>% 
+  select(c(price, cleaning_fee, extra_people)) %>% 
+  mutate(price_4_nights = )  
+
+```
+
