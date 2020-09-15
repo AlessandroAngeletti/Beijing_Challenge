@@ -4,8 +4,8 @@ author: "Study Group 13"
 date: "`r Sys.Date()`"
 output:
   html_document:
-    theme: flatly
-    highlight: zenburn
+    theme: minty
+    highlight: breezedark
     number_sections: yes
     toc: yes
     toc_float: yes
