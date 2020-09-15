@@ -11,6 +11,7 @@ output:
     toc_float: yes
     code_folding: show
 ---
+
 #Change theme
 
 ```{r, setup, include=FALSE}
@@ -40,6 +41,6 @@ library(knitr)
 First we have to download the data.
 
 ```{r weather_data, cache=TRUE}
-data <- vroom("listings.csv.gz")
+data <- vroom::vroom("listings.csv.gz")
 glimpse(data)
 ```
