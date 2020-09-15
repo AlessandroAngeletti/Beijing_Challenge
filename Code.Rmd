@@ -42,6 +42,8 @@ library(janitor)
 library(readr)
 library(leaflet)
 library(scales)
+library(broom)
+options('huxtable.knit_print_df' = FALSE)
 ```
 
 # Studying he Beijing Airbnb Market
@@ -217,8 +219,34 @@ ggplot(data = regression_data, aes(x = price_4_night)) +
   geom_density() +
   scale_x_log10()
 
-#We use logi-logi because we effectively change the case from a unit change to a percent change
-
-
+#We use loggy-loggy because we effectively change the case from a unit change to a percent change
 ```
 
+```{r}
+model1 <- lm(data = regression_data, price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating)
+model1 %>% tidy(conf.int=TRUE)
+model1 %>% glance()
+```
+
+> The following variables are statistically insignificant:
+1. prop_type_simplifiedCondominium
+1. prop_type_simplifiedLoft
+1. review_scores_rating
+
+
+```{r}
+model2 <- lm(data = regression_data, price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type)
+model2 %>% tidy(conf.int=TRUE)
+model2 %>% glance()
+```
+
+> The following variables are statistically insignificant:
+1. prop_type_simplifiedCondominium
+1. prop_type_simplifiedLoft
+1. prop_type_simplifiedServiced apartment
+1. review_scores_rating
+
+```{r}
+model3 <- lm(data = regression_data, price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type - prop_type_simplified)
+msummary(model3)
+```
