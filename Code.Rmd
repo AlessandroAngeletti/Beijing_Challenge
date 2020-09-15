@@ -60,7 +60,7 @@ data
 glimpse(data)
 
 # Since there is a lot going on, lets compute some summary statistics
-listings <- data %>% 
+  listings <- data %>% 
   
   #Lets pick the stuff we need
   select(c(price,
@@ -120,7 +120,11 @@ skim(cleaning_fee)
 We're figuring out what types of properties we're dealing with
 ```{r}
 data_cleaned %>% 
+  
+  # Counting the frequency of property types
   count(property_type) %>% 
+  
+  # Arranging them into descending order by frequency
   arrange(desc(n))
 
 ```
@@ -128,13 +132,15 @@ data_cleaned %>%
 We're now classifying into 6 different groups such that we group the smaller categories under other.
 ```{r}
 cleaning <- data_cleaned %>%
+  # Creating a new variable that groups the property types into one of 5 categories to group together the smaller types of properties.
+  # For example, "Boutique hotel" will now come under "Other"
   mutate(prop_type_simplified = case_when(
-    property_type %in% c("Apartment","Condominium", "House","Loft", "Serviced apartment") ~ property_type, 
+    property_type %in% c("Apartment","Condominium", "House","Loft") ~ property_type, 
     TRUE ~ "Other"
   ))
-  # %>% 
+  # %>%
   # count(property_type, prop_type_simplified) %>%
-  # arrange(desc(n))  
+  # arrange(desc(n))
 
 cleaning
 ```
@@ -189,9 +195,14 @@ leaflet(data = filter(cleaning, minimum_nights <= 4)) %>%
 ## Regression Analysis
 
 ```{r}
-cleaning %>% 
-  select(c(price, cleaning_fee, extra_people)) %>% 
-  mutate(price_4_nights = )  
+regression_data <-  cleaning %>% 
+  #select(c(price, cleaning_fee, extra_people)) %>% 
+  mutate(price_4_night = case_when(
+      guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
+      TRUE ~ cleaning_fee + (4 * price)
+    )
+  )
 
+regression_data
 ```
 
