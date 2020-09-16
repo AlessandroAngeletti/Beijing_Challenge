@@ -44,6 +44,9 @@ library(leaflet)
 library(scales)
 library(broom)
 library(huxtable)
+library(car)
+library(ggfortify)
+library(rsample)
 options('huxtable.knit_print_df' = FALSE)
 ```
 
@@ -87,7 +90,11 @@ glimpse(data)
            neighbourhood_cleansed,
            cancellation_policy,
            listing_url,
-           is_location_exact
+           is_location_exact,
+           security_deposit,
+           review_scores_cleanliness,
+           instant_bookable,
+           is_business_travel_ready
            )
          ) %>% 
 
@@ -95,7 +102,8 @@ glimpse(data)
   mutate(
     price = parse_number(price),
     cleaning_fee = parse_number(cleaning_fee),
-    extra_people = parse_number(extra_people)
+    extra_people = parse_number(extra_people),
+    security_deposit = parse_number(security_deposit)
   )
 
 listings
@@ -113,7 +121,12 @@ data_cleaned <- listings %>%
     cleaning_fee = case_when(
       is.na(cleaning_fee) ~ 0,
       TRUE ~ cleaning_fee
-    ))
+        ),
+    security_deposit = case_when(
+      is.na(security_deposit) ~ 0,
+      TRUE ~ security_deposit
+        )
+    )
 
 data_cleaned
 
@@ -164,7 +177,6 @@ cleaning %>%
   geom_density(aes(x = minimum_nights)) +
   scale_x_log10()
 
-
 cleaning
 
 cleaning %>% 
@@ -207,23 +219,25 @@ regression_data <-  cleaning %>%
   # New variable that computes the price of 2 people sleeping in a ... for 4 nights
   # Note that the extra people charge is applied per night when number of guests exceed the guests included variable
   # aka if its less than 2
-  mutate(price_4_night = case_when(
+  mutate(price_4_nights = case_when(
       guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
       TRUE ~ cleaning_fee + (4 * price)
     )
+  ) %>% 
+  mutate(
+    price_4_night = log(price_4_nights)  #searchable
   )
 
 regression_data
 
 # ggplot for price_4_nights
-ggplot(data = regression_data, aes(x = price_4_night)) +
+ggplot(data = regression_data, aes(x = price_4_nights)) +
   geom_histogram() +
   xlim(0, 40000)
 
 # ggplot for log of price_4_nights
 ggplot(data = regression_data, aes(x = price_4_night)) +
-  geom_density() +
-  scale_x_log10()
+  geom_density() 
 
 # We use loggy-loggy because we effectively change the case from a unit change to a percent change
 
@@ -329,8 +343,10 @@ model7 %>% glance()
 ```
 > Nope
 
+next variable 
+
 ```{r}
-model8 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + (is_location_exact == TRUE), 
+model8 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact, 
              regression_data
             )
 
@@ -338,5 +354,130 @@ model8 %>% tidy(conf.int=TRUE)
 model8 %>% glance()
 ```
 
-> 
+We are missing the neightbourg stuff
 
+```{r}
+# model9 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy,
+#              regression_data
+#             )
+# 
+# model9 %>% tidy(conf.int=TRUE)
+# model9 %>% glance()
+```
+
+We now add the cancellation policy stuff
+
+```{r}
+model10 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy,
+             regression_data
+            )
+
+model10 %>% tidy(conf.int=TRUE)
+model10 %>% glance()
+```
+> Cancelation policy does not seem to significantly affect the price
+
+```{r}
+huxreg(model3, model4, model5, model8, model10,
+       statistics = c('#observations' = 'nobs', 
+                      'R squared' = 'r.squared', 
+                      'Adj. R Squared' = 'adj.r.squared', 
+                      'Residual SE' = 'sigma'), 
+       bold_signif = 0.05, 
+       stars = NULL
+) %>% 
+  set_caption('Comparison of models')
+```
+
+```{r}
+
+# regression_data %>% 
+#   select(c(price_4_night, 
+#            review_scores_cleanliness, security_deposit)) %>% 
+# ggpairs()
+
+model11 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy + review_scores_cleanliness, 
+             regression_data
+            )
+
+model11 %>% tidy(conf.int=TRUE)
+model11 %>% glance()
+
+model12 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy + instant_bookable,
+             regression_data
+            )
+
+model12 %>% tidy(conf.int=TRUE)
+model12 %>% glance()
+
+model13 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + security_deposit,
+             regression_data
+            )
+
+model13 %>% tidy(conf.int=TRUE)
+model13 %>% glance()
+
+#################
+huxreg(model11, model12, model13,
+       statistics = c('#observations' = 'nobs', 
+                      'R squared' = 'r.squared', 
+                      'Adj. R Squared' = 'adj.r.squared', 
+                      'Residual SE' = 'sigma'), 
+       bold_signif = 0.05, 
+       stars = NULL
+) %>% 
+  set_caption('Comparison of models')
+
+# 
+
+car::vif(model1)
+car::vif(model2)
+car::vif(model13)
+
+########### https://www.displayr.com/variance-inflation-factors-vifs/ USE THIS TO EXPLAIN - ex: beds/baths/accommodates - but none of the VIFs is high enough to suggest collinearity so we're good
+
+```
+
+
+## Diagnostics, collinearity, summary tables
+
+```{r}
+
+autoplot(model1)
+
+```
+```{r}
+
+reading_week <- regression_data %>% 
+  filter(prop_type_simplified=="Apartment", 
+         room_type=="Private room", 
+         number_of_reviews >=10,
+         review_scores_rating >=90)
+
+reading_week
+
+set.seed(6789)
+
+train_test_split <- initial_split(reading_week, prop=0.75)
+reading_week_train <- training(train_test_split)
+reading_week_test <- testing(train_test_split)
+
+rmse_train <- reading_week_train %>% 
+  mutate(
+    predictions = predict(model1, .)
+  ) %>% 
+  summarise(
+    sqrt(sum(predictions - price_4_night)**2/n())) %>% 
+  pull()
+
+rmse_train
+
+rmse_test <- reading_week_test %>% 
+  mutate(predictions = predict(model1, .)) %>% 
+  summarise(
+    sqrt(sum(predictions - price_4_night)**2/n())) %>% 
+  pull()
+
+rmse_test
+
+```
