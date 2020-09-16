@@ -265,7 +265,7 @@ p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a
 ```
 > Notes on distributions of numerical variables
 
-```{}
+```{r}
 data_numerical <- data_cleaned %>% 
   select(c(price, cleaning_fee, guests_included, extra_people, number_of_reviews, review_scores_rating, minimum_nights, accommodates, beds, bathrooms, bedrooms)) %>% 
     ggpairs() +
