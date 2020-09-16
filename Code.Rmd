@@ -1,0 +1,342 @@
+---
+title: "Group 13 - Final Project: Beijing"
+author: "Study Group 13"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: minty
+    highlight: breezedark
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+---
+
+#Change theme
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+```{r load-libraries, include=FALSE}
+#Using this space to load libraries
+library(vroom)
+library(dplyr)
+library(knitr)
+library(mosaic)
+library(skimr)
+library(ggplot2)
+library(GGally)
+library(janitor)
+library(readr)
+library(leaflet)
+library(scales)
+library(broom)
+library(huxtable)
+options('huxtable.knit_print_df' = FALSE)
+```
+
+# Studying he Beijing Airbnb Market
+
+First we have to download the data.
+
+```{r weather_data, cache=TRUE}
+data <- vroom::vroom("listings.csv.gz") %>% 
+  clean_names()
+data
+```
+
+## Exploratory Data Analysis 
+
+```{r}
+# Lets have a look at what we're dealing with!
+glimpse(data)
+
+# Since there is a lot going on, lets compute some summary statistics
+  listings <- data %>% 
+  
+  #Lets pick the stuff we need
+  select(c(price,
+           cleaning_fee,
+           extra_people,
+           room_type,
+           property_type,
+           number_of_reviews,
+           review_scores_rating,
+           longitude,
+           latitude,
+           neighbourhood,
+           minimum_nights,
+           guests_included,
+           bathrooms,
+           bedrooms,
+           beds,
+           accommodates,
+           host_is_superhost,
+           neighbourhood_cleansed,
+           cancellation_policy,
+           listing_url,
+           is_location_exact
+           )
+         ) %>% 
+
+  #Getting rid of the $'s and getting
+  mutate(
+    price = parse_number(price),
+    cleaning_fee = parse_number(cleaning_fee),
+    extra_people = parse_number(extra_people)
+  )
+
+listings
+```
+
+
+### Removing Missing Values
+
+```{r}
+
+data_cleaned <- listings %>% 
+  
+  # Handling NA's
+  mutate(
+    cleaning_fee = case_when(
+      is.na(cleaning_fee) ~ 0,
+      TRUE ~ cleaning_fee
+    ))
+
+data_cleaned
+
+data_cleaned %>% 
+skim(cleaning_fee)
+```
+
+> Some properties do not have the cleaning fee separately because they include it in the rent price. This way, it is not seen as an "additional cost".
+> #Psychology 
+
+We're figuring out what types of properties we're dealing with
+```{r}
+data_cleaned %>% 
+  
+  # Counting the frequency of property types
+  count(property_type) %>% 
+  
+  # Arranging them into descending order by frequency
+  arrange(desc(n))
+
+```
+
+We're now classifying into 6 different groups such that we group the smaller categories under other.
+```{r}
+cleaning <- data_cleaned %>%
+  # Creating a new variable that groups the property types into one of 5 categories to group together the smaller types of properties.
+  # For example, "Boutique hotel" will now come under "Other"
+  mutate(prop_type_simplified = case_when(
+    property_type %in% c("Apartment","Condominium", "House","Loft") ~ property_type, 
+    TRUE ~ "Other"
+  ))
+  # %>%
+  # count(property_type, prop_type_simplified) %>%
+  # arrange(desc(n))
+
+cleaning
+```
+
+
+
+```{r}
+
+# We want to use log to transform our data into a mroe normal looking distribution of data
+
+cleaning %>% 
+  #filter(minimum_nights <= 4) %>% 
+  ggplot() +
+  geom_density(aes(x = minimum_nights)) +
+  scale_x_log10()
+
+
+cleaning
+
+cleaning %>% 
+  count(minimum_nights) %>% 
+  arrange(desc(n))
+
+favstats(data = cleaning , ~ minimum_nights) 
+```
+
+What are the most common values for the variable minimum_nights?
+Is there any value among the common values that stands out?
+What is the likely intended purpose for Airbnb listings with this seemingly unusual value for minimum_nights?
+Filter the airbnb data so that it only includes observations with minimum_nights <= 4
+
+> The most common values are between 1 to 3 nights.
+
+> Minimum nights over 30 days is rather strange as by this point you're no longer looking to be a tourist and rather live there
+
+>
+
+## Mapping
+
+```{r}
+leaflet(data = filter(cleaning, minimum_nights <= 4)) %>% 
+  addProviderTiles("OpenStreetMap.Mapnik") %>% 
+  addCircleMarkers(lng = ~longitude, 
+                   lat = ~latitude, 
+                   radius = 1, 
+                   fillColor = "blue", 
+                   fillOpacity = 0.4, 
+                   popup = ~listing_url,
+                   label = ~property_type)
+```
+
+## Regression Analysis
+
+```{r, Options(scipen = 999), fig.width=10, fig.height =15}
+
+regression_data <-  cleaning %>% 
+  # New variable that computes the price of 2 people sleeping in a ... for 4 nights
+  # Note that the extra people charge is applied per night when number of guests exceed the guests included variable
+  # aka if its less than 2
+  mutate(price_4_night = case_when(
+      guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
+      TRUE ~ cleaning_fee + (4 * price)
+    )
+  )
+
+regression_data
+
+# ggplot for price_4_nights
+ggplot(data = regression_data, aes(x = price_4_night)) +
+  geom_histogram() +
+  xlim(0, 40000)
+
+# ggplot for log of price_4_nights
+ggplot(data = regression_data, aes(x = price_4_night)) +
+  geom_density() +
+  scale_x_log10()
+
+# We use loggy-loggy because we effectively change the case from a unit change to a percent change
+
+# ggpairs for correlation
+glimpse(regression_data)
+
+regression_data %>% 
+  select(-c(room_type, property_type, longitude, latitude, neighbourhood, neighbourhood_cleansed, cancellation_policy, listing_url, prop_type_simplified)) %>% 
+  ggpairs()
+```
+> Johanna's writing about ggpairs
+
+```{r, Options(scipen=999)}
+model1 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating, regression_data)
+model1 %>% tidy(conf.int=TRUE)
+model1 %>% glance()
+```
+
+> The following variables are statistically insignificant:
+1. prop_type_simplifiedCondominium
+1. prop_type_simplifiedLoft
+1. review_scores_rating
+
+
+```{r}
+model2 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type, regression_data)
+model2 %>% tidy(conf.int=TRUE)
+model2 %>% glance()
+```
+
+> The following variables are statistically insignificant:
+1. prop_type_simplifiedCondominium
+1. prop_type_simplifiedLoft
+1. prop_type_simplifiedServiced apartment
+1. review_scores_rating
+
+## comparing model 1 and model 2
+```{r}
+huxreg(model1, model2,
+       statistics = c('#observations' = 'nobs', 
+                      'R squared' = 'r.squared', 
+                      'Adj. R Squared' = 'adj.r.squared', 
+                      'Residual SE' = 'sigma'), 
+       bold_signif = 0.05, 
+       stars = NULL
+) %>% 
+  set_caption('Comparison of models')
+```
+
+> interpretation of the coefficients of review scores rating and prop_type_simplified with respect to price_4_nights
+
+## adding more variables  
+
+```{r}
+#
+model3 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates , 
+             regression_data
+            )
+
+model3 %>% tidy(conf.int=TRUE)
+model3 %>% glance()
+
+# excluded beds but realised let's keep it
+# model4 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + accommodates , 
+#              regression_data
+#             )
+# 
+# model4 %>% tidy(conf.int=TRUE)
+# model4 %>% glance()
+```
+> hypothesize that being a super host would significantly impact price of 4 nights 
+
+```{r}
+# superhost or not
+model5 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost, 
+             regression_data
+            )
+
+model5 %>% tidy(conf.int=TRUE)
+model5 %>% glance()
+```
+> our hypothesis is rejected as the variable is insignificant. drop host_is_superhost, does not matter heheh. add some logic as to why people visiting Beijing don't care if their host is a superhost. 
+
+```{r}
+# We know that superhost is not relevant, however, is it relevant if its intertwined with the number of reviews?
+model6 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost*number_of_reviews, 
+             regression_data
+            )
+
+model6 %>% tidy(conf.int=TRUE)
+model6 %>% glance()
+```
+> Nope
+
+```{r}
+# We know that superhost is not relevant, however, is it relevant if its intertwined with the review ratings?
+model7 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost*review_scores_rating, 
+             regression_data
+            )
+
+model7 %>% tidy(conf.int=TRUE)
+model7 %>% glance()
+```
+> Nope
+
+```{r}
+model8 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + (is_location_exact == TRUE), 
+             regression_data
+            )
+
+model8 %>% tidy(conf.int=TRUE)
+model8 %>% glance()
+```
+
+> 
+
