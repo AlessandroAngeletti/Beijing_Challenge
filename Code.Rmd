@@ -43,6 +43,9 @@ library(readr)
 library(leaflet)
 library(scales)
 library(broom)
+library(ggridges)
+library(patchwork)
+library(kableExtra)
 options('huxtable.knit_print_df' = FALSE)
 ```
 
@@ -53,7 +56,6 @@ First we have to download the data.
 ```{r weather_data, cache=TRUE}
 data <- vroom::vroom("listings.csv.gz") %>% 
   clean_names()
-data
 ```
 
 ## Exploratory Data Analysis 
@@ -61,11 +63,19 @@ data
 ```{r}
 # Lets have a look at what we're dealing with!
 glimpse(data)
+```
+> From this output we can see that we have
+* There are just over 36 thousand observations (or Airbnb listings) in Beijing in the data set
+* There are 106 different variables included in the data
+* These variables are a mixture of 'double', 'character', 'logic' and 'date'
+* Straightaway we can see that some of our 'price' variables include dollar signs ($) and are down as 'character' variables rather than 'double' variables
 
-# Since there is a lot going on, lets compute some summary statistics
+Since this is a large data set with a lot going on, we will compute some summary statistics on key variables
+
+```{r}
   listings <- data %>% 
   
-  #Lets pick the stuff we need
+  #Lets pick the variables we need
   select(c(price,
            cleaning_fee,
            extra_people,
@@ -79,6 +89,8 @@ glimpse(data)
            minimum_nights,
            guests_included,
            bathrooms,
+           bedrooms,
+           beds,
            accommodates,
            host_is_superhost,
            neighbourhood_cleansed,
@@ -87,20 +99,27 @@ glimpse(data)
            )
          ) %>% 
 
-  #Getting rid of the $'s and getting
+  #Removing dollar signs and changing into numerical variables
   mutate(
     price = parse_number(price),
     cleaning_fee = parse_number(cleaning_fee),
     extra_people = parse_number(extra_people)
   )
+          
 
-listings
+
 ```
 
 
 ### Removing Missing Values
+Next we need to check for missing values, as this can ruin our data analysis.
 
 ```{r}
+# Check which variables have lots of missing values (NA's)
+listings %>% 
+  skim() %>% 
+  kbl() %>% 
+  kable_styling()
 
 data_cleaned <- listings %>% 
   
@@ -111,14 +130,147 @@ data_cleaned <- listings %>%
       TRUE ~ cleaning_fee
     ))
 
-data_cleaned
-
 data_cleaned %>% 
-skim(cleaning_fee)
+skim(cleaning_fee) %>% 
+  kbl() %>% 
+  kable_styling()
 ```
 
 > Some properties do not have the cleaning fee separately because they include it in the rent price. This way, it is not seen as an "additional cost".
 > #Psychology 
+
+### Exploring Correlation Between Variables
+
+```{r}
+
+# Using patchwork to create a visualization of density for all numerical variables
+p1 <- ggplot(data = cleaning, aes(x = price)) +
+  geom_density() +
+  theme_bw() 
+
+p2 <- ggplot(data = cleaning, aes(x = cleaning_fee)) +
+  geom_density() +
+  theme_bw() 
+
+p3 <- ggplot(data = cleaning, aes(x = guests_included)) +
+  geom_density() +
+  theme_bw()
+
+p4 <- ggplot(data = cleaning, aes(x = extra_people)) +
+  geom_density() +
+  theme_bw()
+
+p5 <- ggplot(data = cleaning, aes(x = number_of_reviews)) +
+  geom_density() +
+  theme_bw()
+
+p6 <- ggplot(data = cleaning, aes(x = review_scores_rating)) +
+  geom_density() +
+  theme_bw() 
+
+p7 <- ggplot(data = cleaning, aes(x = minimum_nights)) +
+  geom_density() +
+  theme_bw() 
+
+p8 <- ggplot(data = cleaning, aes(x = accommodates)) +
+  geom_density() +
+  theme_bw()
+
+p9 <- ggplot(data = cleaning, aes(x = beds)) +
+  geom_density() +
+  theme_bw()
+
+p10 <- ggplot(data = cleaning, aes(x = bathrooms)) +
+  geom_density() +
+  theme_bw()
+
+p11 <- ggplot(data = cleaning, aes(x = bedrooms)) +
+  geom_density() +
+  theme_bw()
+
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11
+
+#rescale some of the axis to improve readability
+
+p1a <- ggplot(data = cleaning, aes(x = price)) +
+  geom_density() +
+  xlim(0, 10000) +
+  theme_bw() 
+
+p2a <- ggplot(data = cleaning, aes(x = cleaning_fee)) +
+  geom_density() +
+  xlim(0, 300) +
+  theme_bw() 
+
+p3a <- ggplot(data = cleaning, aes(x = guests_included)) +
+  geom_density() +
+  xlim(0, 8) +
+  theme_bw()
+
+p4a <- ggplot(data = cleaning, aes(x = extra_people)) +
+  geom_density() +
+  xlim(0, 400) +
+  theme_bw()
+
+p5a <- ggplot(data = cleaning, aes(x = number_of_reviews)) +
+  geom_density() +
+  xlim(0, 100) +
+  theme_bw()
+
+p6a <- ggplot(data = cleaning, aes(x = review_scores_rating)) +
+  geom_density() +
+  xlim(0, 100) +
+  theme_bw() 
+
+p7a <- ggplot(data = cleaning, aes(x = minimum_nights)) +
+  geom_density() +
+  xlim(0, 150) +
+  theme_bw() 
+
+p8a <- ggplot(data = cleaning, aes(x = accommodates)) +
+  geom_density() +
+  theme_bw()
+
+p9a <- ggplot(data = cleaning, aes(x = beds)) +
+  geom_density() +
+  xlim(0, 20) +
+  theme_bw()
+
+p10a <- ggplot(data = cleaning, aes(x = bathrooms)) +
+  geom_density() +
+  xlim(0, 20) +
+  theme_bw()
+
+p11a <- ggplot(data = cleaning, aes(x = bedrooms)) +
+  geom_density() +
+  xlim(0, 15) +
+  theme_bw()
+
+p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a
+```
+> Notes on distributions of numerical variables
+
+```{}
+data_numerical <- data_cleaned %>% 
+  select(c(price, cleaning_fee, guests_included, extra_people, number_of_reviews, review_scores_rating, minimum_nights, accommodates, beds, bathrooms, bedrooms)) %>% 
+    ggpairs() +
+  theme_bw()
+
+data_numerical
+```
+> Notable correlations with price are:
+1. Accomodates (number of people the listing can accomodate)
+1. Bedrooms (number of bedrooms at the listing)
+1. Bathrooms (number of bathrooms at the listing)
+1. Beds (number of beds at the listing)
+1. Cleaning fee (additional flat cleaning fee)
+1. Guests included (number of guests included in the price and exempt from <extra_people> fee)
+1. Extra People (charge per night for each person over the <guests_included>)
+
+>Notable correlations between variables:
+1. Accomodates/Beds/Bathrooms/Bedrooms/ - this makes sense because...????
+1. 
+
 
 We're figuring out what types of properties we're dealing with
 ```{r}
@@ -132,7 +284,7 @@ data_cleaned %>%
 
 ```
 
-We're now classifying into 6 different groups such that we group the smaller categories under other.
+We're now classifying into 6 different groups such that we group the smaller categories under 'other'.
 ```{r}
 cleaning <- data_cleaned %>%
   # Creating a new variable that groups the property types into one of 5 categories to group together the smaller types of properties.
@@ -145,14 +297,31 @@ cleaning <- data_cleaned %>%
   # count(property_type, prop_type_simplified) %>%
   # arrange(desc(n))
 
-cleaning
+
+p12 <- ggplot(data = cleaning, aes(x = prop_type_simplified)) +
+  geom_bar() +
+  theme_bw()
+
+p13 <- ggplot(data = cleaning, aes(x = room_type)) +
+  geom_bar() +
+  theme_bw()
+
+p14 <- ggplot(data = cleaning, aes(x = host_is_superhost)) +
+  geom_bar() +
+  theme_bw()
+
+p15 <- ggplot(data = cleaning, aes(x = cancellation_policy)) +
+  geom_bar() +
+  theme_bw()
+
+p12 + p13 + p14 + p15
 ```
 
 
 
 ```{r}
 
-# We want to use log to transform our data into a mroe normal looking distribution of data
+# We want to use log to transform our data into a more normal looking distribution of data
 
 cleaning %>% 
   #filter(minimum_nights <= 4) %>% 
@@ -167,7 +336,9 @@ cleaning %>%
   count(minimum_nights) %>% 
   arrange(desc(n))
 
-favstats(data = cleaning , ~ minimum_nights) 
+favstats(data = cleaning , ~ minimum_nights) %>% 
+  kbl() %>% 
+  kable_styling()
 ```
 
 What are the most common values for the variable minimum_nights?
@@ -225,7 +396,9 @@ ggplot(data = regression_data, aes(x = price_4_night)) +
 ```{r}
 model1 <- lm(data = regression_data, price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating)
 model1 %>% tidy(conf.int=TRUE)
-model1 %>% glance()
+model1 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 ```
 
 > The following variables are statistically insignificant:
