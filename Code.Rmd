@@ -393,7 +393,7 @@ regression_data <-  cleaning %>%
     )
   ) %>% 
   mutate(
-    price_4_night = log(price_4_nights)  #searchable
+    price_4_night = log(price_4_nights + 0.000000001)  #searchable
   )
 
 regression_data
