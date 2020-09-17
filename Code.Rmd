@@ -580,15 +580,25 @@ model8 %>% tidy(conf.int=TRUE)
 model8 %>% glance()
 ```
 
-We are missing the neightbourg stuff
+We now add the neighbourhood element
 
 ```{r}
-# model9 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy,
-#              regression_data
-#             )
-# 
-# model9 %>% tidy(conf.int=TRUE)
-# model9 %>% glance()
+model9 <- lm(price_4_night ~ 
+               prop_type_simplified + 
+               number_of_reviews + 
+               review_scores_rating + 
+               room_type + 
+               bedrooms + 
+               bathrooms + 
+               beds + 
+               accommodates + 
+               is_location_exact + 
+               neighbourhood_simplified,
+              regression_data
+             )
+
+model9 %>% tidy(conf.int=TRUE)
+model9 %>% glance()
 
 
 ```
@@ -596,7 +606,18 @@ We are missing the neightbourg stuff
 We now add the cancellation policy stuff
 
 ```{r}
-model10 <- lm(price_4_night ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy,
+model10 <- lm(price_4_night ~ 
+                prop_type_simplified + 
+                number_of_reviews + 
+                review_scores_rating + 
+                room_type + 
+                bedrooms + 
+                bathrooms + 
+                beds + 
+                accommodates + 
+                is_location_exact +
+                neighbourhood_simplified +
+                cancellation_policy,
              regression_data
             )
 
