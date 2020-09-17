@@ -433,17 +433,34 @@ regression_data <-  cleaning %>%
   # New variable that computes the price of 2 people sleeping in a ... for 4 nights
   # Note that the extra people charge is applied per night when number of guests exceed the guests included variable
   # aka if its less than 2
-  mutate(price_4_nights = case_when(
-      guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
-      TRUE ~ cleaning_fee + (4 * price)
-    )
-  ) %>% 
   mutate(
+    price_4_nights = case_when(guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
+                               TRUE ~ cleaning_fee + (4 * price)),
     price_4_night = log(price_4_nights + 0.000000001)  #searchable
   )
 
 regression_data
 
+neighbourhoodring <- vroom::vroom("neighbourhoodring.csv")
+
+regression_data %>% 
+  #New variable that classifies neighborhood into 5 areas according to Beijing's geographical characteristic
+  #The 5 areas are Ring 2-6
+  mutate(neighbourhood_simplified = neighbourhoodring$Ring[match(neighbourhood, neighbourhoodring$neighbourhood)]) 
+
+regression_data
+#  left_join(., neighbourhoodring, by = "neighbourhood", copy = TRUE)
+  mutate(
+    neighbourhood_simplified = case_when(
+      neighbourhood = c("",) ~ "Zone 2"
+      neighbourhood = c("",) ~ "Zone 3"
+      neighbourhood = c("",) ~ "Zone 4"
+      neighbourhood = c("",) ~ "Zone 5"
+      TRUE ~ "Zone 6"
+    )
+  )
+  
+  
 # ggplot for price_4_nights
 ggplot(data = regression_data, aes(x = price_4_nights)) +
   geom_histogram() +
@@ -581,6 +598,8 @@ We are missing the neightbourg stuff
 # 
 # model9 %>% tidy(conf.int=TRUE)
 # model9 %>% glance()
+
+
 ```
 
 We now add the cancellation policy stuff
