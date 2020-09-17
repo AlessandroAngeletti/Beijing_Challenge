@@ -50,6 +50,7 @@ library(ggridges)
 library(patchwork)
 library(kableExtra)
 library(patchwork)
+library(stringr)
 options('huxtable.knit_print_df' = FALSE)
 ```
 
@@ -112,7 +113,10 @@ Since this is a large data set with a lot going on, we will compute some summary
            security_deposit,
            review_scores_cleanliness,
            instant_bookable,
-           is_business_travel_ready
+           amenities,
+           calculated_host_listings_count,
+           reviews_per_month,
+           host_acceptance_rate
            )
          ) %>% 
 
@@ -158,7 +162,6 @@ listings %>%
 data_cleaned <- listings %>% 
   
   # In order to handle the high volume of NA's in cleaning_fee, we will change these values to a 0
-  
   mutate(
     cleaning_fee = case_when(
       is.na(cleaning_fee) ~ 0,
@@ -169,13 +172,30 @@ data_cleaned <- listings %>%
     security_deposit = case_when(
       is.na(security_deposit) ~ 0,
       TRUE ~ security_deposit
+        ),
+    reviews_per_month = case_when(
+      is.na(reviews_per_month) ~0,
+      TRUE ~ reviews_per_month
+        ),
+    wifi = case_when(
+      str_detect(amenities, "Wifi") ~ TRUE,
+      str_detect(amenities, "wifi") ~ TRUE,
+      TRUE ~ FALSE
+        ),
+    breakfast = case_when(
+      str_detect(amenities, "Breakfast") ~ TRUE,
+      str_detect(amenities, "breakfast") ~ TRUE,
+      TRUE ~ FALSE
         )
     )
+
+# lets examine wifi and breakfast columns
+data_cleaned %>% 
+  select(c(price, wifi, breakfast))
 
 # Let's skim the cleaning_fee variable to see if we have succeeded
 data_cleaned %>% 
 skim(cleaning_fee) %>% 
-
   # the kable package is used to format the resulting tables in a more visually appealing way
   kbl() %>% 
   kable_styling()
@@ -191,14 +211,19 @@ skim(cleaning_fee) %>%
 # Using patchwork to create a visualization of density for all numerical variables
 p1 <- ggplot(data = data_cleaned, aes(x = price)) +
   geom_density() +
-  theme_bw()
+  theme_bw() + 
+  labs(title = "Variability of Price",
+       subtitle="Difficulty interpreting density due to outliers in price") +
+  theme(
+    plot.title = element_text(face="bold")
+  )
+
+# Before creating plots for all other numerical variables, let's check the readability
+p1
 ```
 
-Before creating plots for all other numerical variables, let's check the readability
 
 ```{r}
-p1
-
 #Some of the x-axis for the data mean that it is difficult to get a full picture of the variability in the variables
 
 p1a <- ggplot(data = data_cleaned, aes(x = price)) +
@@ -207,59 +232,96 @@ p1a <- ggplot(data = data_cleaned, aes(x = price)) +
   #Here we add a limit to the x-axis, where the maximum value is 10000. We add this to most of the plots, where necessary
   
   xlim(0, 10000) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Price $", x = "", y = "") +
+  theme(plot.title = element_text(size = 8))
 
 p2a <- ggplot(data = data_cleaned, aes(x = cleaning_fee)) +
   geom_density() +
   xlim(0, 300) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Cleaning Fee $", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p3a <- ggplot(data = data_cleaned, aes(x = guests_included)) +
+p5a <- ggplot(data = data_cleaned, aes(x = guests_included)) +
   geom_density() +
   xlim(0, 8) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "Guests Included", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p4a <- ggplot(data = data_cleaned, aes(x = extra_people)) +
+p3a <- ggplot(data = data_cleaned, aes(x = extra_people)) +
   geom_density() +
   xlim(0, 400) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "Extra People Fee $", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p5a <- ggplot(data = data_cleaned, aes(x = number_of_reviews)) +
+p10a <- ggplot(data = data_cleaned, aes(x = number_of_reviews)) +
   geom_density() +
   xlim(0, 100) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Reviews", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p6a <- ggplot(data = data_cleaned, aes(x = review_scores_rating)) +
+p11a <- ggplot(data = data_cleaned, aes(x = review_scores_rating)) +
   geom_density() +
   xlim(0, 100) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Review Ratings", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p7a <- ggplot(data = data_cleaned, aes(x = minimum_nights)) +
+p9a <- ggplot(data = data_cleaned, aes(x = minimum_nights)) +
   geom_density() +
   xlim(0, 150) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Minimum Night Stay", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p8a <- ggplot(data = data_cleaned, aes(x = accommodates)) +
+p4a <- ggplot(data = data_cleaned, aes(x = accommodates)) +
   geom_density() +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. Accomodated", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p9a <- ggplot(data = data_cleaned, aes(x = beds)) +
+p7a <- ggplot(data = data_cleaned, aes(x = beds)) +
   geom_density() +
   xlim(0, 20) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Beds", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p10a <- ggplot(data = data_cleaned, aes(x = bathrooms)) +
+p8a <- ggplot(data = data_cleaned, aes(x = bathrooms)) +
   geom_density() +
   xlim(0, 20) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Bathrooms", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p11a <- ggplot(data = data_cleaned, aes(x = bedrooms)) +
+p6a <- ggplot(data = data_cleaned, aes(x = bedrooms)) +
   geom_density() +
   xlim(0, 15) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Bedrooms", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a
+p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a +
+  plot_annotation(title = "Variability in Numerical Variables", 
+                  subtitle = "Majority of numerical variables are highly right-skewed")
+
 ```
+
+```{r, fig.width=15, fig.height=15}
+
+# using ggpairs to plot a correlation matrix
+data_cleaned %>% 
+  select(c(price, cleaning_fee, guests_included, 
+           extra_people, number_of_reviews, review_scores_rating, 
+           minimum_nights, accommodates, beds, bathrooms, bedrooms, security_deposit)
+         ) %>% 
+    ggpairs()
+```
+
 
 ```{r, fig.width=15, fig.height=15}
 
@@ -398,15 +460,25 @@ leaflet(data = filter(cleaning, minimum_nights <= 4)) %>%
 # Adding our listing data as points on the map
   
   addCircleMarkers(lng = ~longitude, 
-                   lat = ~latitude, 
-                   radius = 1, 
-                   fillColor = "blue", 
-                   fillOpacity = 0.4, 
+                   lat = ~latitude,
+
+# Adding a function, so that when you click on  a data point, the Airbnb URL for the listing appears
+                   
                    popup = ~listing_url,
-                   label = ~property_type)
+
+# Adding a label function, so when you hover over a data point, the property type shows
+
+                   label = ~property_type,
+
+# Due to the high number of markers on the map, we add a cluster option so that it is easier to interpret
+
+                   clusterOptions = markerClusterOptions())
+
+# We can freeze the clustering with "freezeAtZoom" in the markerClusterOptions, but we want this map to be dynamic and allow zooming in to individual listings
 ```
 
 # Regression Analysis
+
 ## Preparation for Regression Analysis
 
 In order to run a regression model, we will transform our price data into a approximately 'normal' distribution.
@@ -622,7 +694,7 @@ model6 %>% glance() %>%
 
 Well, the variable `is_location_exact` seems to be significant as per its t-stat and p-value however the negative coefficient is surprising. Maybe that has something to do - not with whether the location specified is exact, but with what the location is!
 
-For this purpose, let us include neighbourhood location into our regression model. To make things simple, we created a new variable called `neighbourhood_simplified` which groups different listings into broader categories or rings. **??????????????????**
+For this purpose, let us include neighbourhood location into our regression model. To make things simple, we created a new variable called `neighbourhood_simplified` which groups different listings into broader categories or rings. 
 
 ```{r}
 
@@ -641,7 +713,9 @@ model7 %>% glance() %>%
 
 ```
 `neighbourhood_simplified` is a dummy variable as it has 5 categories - Ring 2, Ring 3, Ring 4, Ring 5 and Ring 6. 
-**PLEASE INTERPRET THIS MORE THANKS**
+Rings are similar to Zones in London, so Ring 2 is a more central location compared to Rings 3, 4, 5 or 6. We hypothesize that more central the location of the property, higher will be the price.
+
+According to the coefficients of `neighbourhood_simplifiedRing x` above, our hypothesis is true. For example, in Ring 2 the intercept term is 6.96. The negative sign in coefficients of Ring 3, 4, 5 and 6 indicates that the intercept term will be lower by 0.2, 0.18, 0.2 and 0.297 respectively. So, further the property from central Beijing, lower the `price_4_nights`.  
 
 With inclusion of these location variables, our adjusted R-squared has increased to 0.492. Let's continue to improve our model further. From the perspective of a host who is setting prices in accordance with the time, money and effort he spends in managing the property, and from the perspective of a traveler who is booking the Airbnb and paying that price, some other variables worth considering are - 
 
@@ -649,6 +723,7 @@ With inclusion of these location variables, our adjusted R-squared has increased
 2. review scores specifically for cleanliness
 3. security deposit amount
 4. whether the property is instant bookable
+5. amenities like wifi and breakfast
 
 ```{r}
 
@@ -664,7 +739,6 @@ model8 %>% glance() %>%
   kbl() %>% 
   kable_styling()
 ```
-> Cancellation policy 
 
 
 ```{r}
@@ -681,7 +755,6 @@ model9 %>% glance() %>%
   kbl() %>% 
   kable_styling()
 ```
-> Cleanliness score - significant, but AIC and BIC is higher compared to when we use cancellation policy
 
 ```{r}
 
@@ -698,7 +771,6 @@ model10 %>% glance() %>%
   kable_styling()
 
 ```
-> not significant. t stat is low
 
 ```{r}
 
@@ -727,12 +799,53 @@ model12 %>% tidy(conf.int=TRUE)
 model12 %>% glance() %>% 
   kbl() %>% 
   kable_styling()
+
 ```
-> log is better because lower AIC and BIC, and higher adjusted R-squared
+
+```{r}
+
+# amenities - try three models - just wifi, just breakfast, both wifi and breakfast
+
+model13 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  wifi,
+             regression_data
+            )
+
+model13 %>% tidy(conf.int=TRUE)
+model13 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+
+model14 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  breakfast,
+             regression_data
+            )
+
+model14 %>% tidy(conf.int=TRUE)
+model14 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+
+model15 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified + wifi + breakfast,
+             regression_data
+            )
+
+model15 %>% tidy(conf.int=TRUE)
+model15 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+```
 
 ```{r}
 # summary table to compare last few models
-huxreg(model8, model9, model10, model11, model12,
+huxreg(model8, model9, model10, model11, model12, model13, model14, model15,
        statistics = c('#observations' = 'nobs', 
                       'R squared' = 'r.squared', 
                       'Adj. R Squared' = 'adj.r.squared', 
@@ -742,9 +855,6 @@ huxreg(model8, model9, model10, model11, model12,
 ) %>% 
   set_caption('Comparison of Models 3.0')
 
-
-########### https://www.displayr.com/variance-inflation-factors-vifs/ USE THIS TO EXPLAIN - ex: beds/baths/accommodates - but none of the VIFs is high enough to suggest collinearity so we're good
-
 ```
 > **Conclusion** : should definitely include `log(security_deposit)` 
 
@@ -752,9 +862,10 @@ huxreg(model8, model9, model10, model11, model12,
 
 final_model <- lm(price_4_nights ~ 
                prop_type_simplified + number_of_reviews + review_scores_rating + 
-               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               room_type + bedrooms + beds + bathrooms + accommodates + host_is_superhost +
                is_location_exact + neighbourhood_simplified +  
-               cancellation_policy + log(security_deposit + 0.001),
+               cancellation_policy + log(security_deposit + 0.001) +
+               wifi + breakfast,
              regression_data
             )
 
@@ -774,7 +885,9 @@ autoplot(final_model)
 
 ```
 
+```{r}
 
+# predicting 
 reading_week <- regression_data %>% 
   filter(prop_type_simplified=="Apartment", 
          room_type=="Private room", 
