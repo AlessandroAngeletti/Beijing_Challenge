@@ -364,8 +364,7 @@ data_numerical <- data_cleaned %>%
   
   #Next we use the ggpairs function to plot a grid of scatter plots with correlation coefficients
   
-  ggpairs() +
-  theme_bw()
+  ggpairs() 
 
 data_numerical
 ```
@@ -420,7 +419,6 @@ cleaning %>%
   geom_density(aes(x = minimum_nights)) +
   
 # Use this to transform the x-axis by log10  
-
   scale_x_log10()
 cleaning
 ```
@@ -493,14 +491,9 @@ ggplot(data = regression_data, aes(x = price_4_nights)) +
 # look at cleaned data for regression models
 glimpse(regression_data)
 
-#regression_data %>% 
-  #select(-c(room_type, property_type, longitude, latitude, neighbourhood, neighbourhood_cleansed, cancellation_policy, #listing_url, prop_type_simplified)) %>% 
-  #ggpairs()
 ```
 
 ### Building Linear Regression Models
-
-## Building Regression Models
 
 ```{r}
 
@@ -509,36 +502,50 @@ model1 <- lm(price_4_nights ~
                prop_type_simplified + number_of_reviews + review_scores_rating,
              regression_data)
 
-model1 %>% tidy(conf.int=TRUE) %>% 
-  kbl() %>% 
-  kable_styling()
+model1 %>% tidy(conf.int=TRUE) 
 
 model1 %>% glance() %>% 
   kbl() %>% 
   kable_styling()
 ```
 
-Here, property type is a categorical variable - it has five categories and therefore makes up 4 dummy variables in the regression model. For example, for 'House', `prop_type_simplifiedHouse` = 1 (`prop_type_simplifiedCondominium` = 0 and `prop_type_simplifiedOther` = 0) and the intercept term would be ~7.11. The intercept term for 'Apartment' would be ~6.91.
+Here, property type is a categorical variable - it has five categories and therefore makes up 4 dummy variables in the regression model. For example, the intercept term for 'Apartment' would just be ~ 6.91. For 'House', `prop_type_simplifiedHouse` = 1 (`prop_type_simplifiedCondominium` = 0 and `prop_type_simplifiedOther` = 0) and the intercept term would be 6.91 + 0.2 ~ 7.11.  For 'Other', `prop_type_simplifiedOther` = 1 (`prop_type_simplifiedCondominium` = 0 and `prop_type_simplifiedHouse` = 0) and the intercept term would be 6.91 + 0.46 ~ 7.37. Therefore, relative to apartments, `price_4_nights` will be higher for houses and lofts but lower for condominiums. 
 
-Other variables such as `number_of_reviews` and `review_scores_rating` are statistically significant and explain the variation in `price_4_nights`, however, a point worth noting is that additional `number_of_reviews` do not lead to an increase in cost for 4 nights as the reviews may not necessarily be good reviews. On the other hand, `review_scores_rating` have a positive effect on price for 4 nights which means that properties with a higher score/ rating would cost more.  
+(**Note**: our Y variable is in log, so the coefficient of all X variables represent percentage change in `price_4_nights` per unit change in whichever X variable we're looking at)
+
+Other variables such as `number_of_reviews` and `review_scores_rating` are statistically significant and explain the variation in `price_4_nights`, however, a point worth noting is that additional `number_of_reviews` do not lead to an increase in cost for 4 nights as the reviews may not necessarily be good reviews. On the other hand, `review_scores_rating` has a positive effect on `price_4_nights` which means that properties with a higher score/ rating would be more pricey.  
 
 
 ```{r}
+
+# model 2 = model 1 + room type
 model2 <- lm(price_4_nights ~ 
                prop_type_simplified + number_of_reviews + review_scores_rating + room_type, 
              regression_data)
-model2 %>% tidy(conf.int=TRUE)
-model2 %>% glance()
+
+model2 %>% tidy(conf.int=TRUE)  
+
+model2 %>% glance()  %>% 
+  kbl() %>% 
+  kable_styling()
+
 ```
 
-> The following variables are statistically insignificant:
-1. prop_type_simplifiedCondominium
-1. prop_type_simplifiedLoft
-1. prop_type_simplifiedServiced apartment
-1. review_scores_rating
+From the above table, we know that `room_type` has a very significant impact on `price_4_nights` as adjusted R-squared for model 2 is more than 4 times the adjusted R-squared for model 1. Room type is also a categorical variable with 3 categories, and hence makes up 2 dummy variables in the regression model.  
 
-## comparing model 1 and model 2
+We notice that the t-stat values for other variables which were already present in model 1, have further increased in model 2 indicating that there may be some multicollinearity between the variables. To check if that's the case, we'll calculate VIF. 
+
 ```{r}
+
+vif(model2)
+
+```
+
+
+### Comparing model1 and model2
+```{r}
+
+# creating a huxtable for summary of two models
 huxreg(model1, model2,
        statistics = c('#observations' = 'nobs', 
                       'R squared' = 'r.squared', 
@@ -547,163 +554,185 @@ huxreg(model1, model2,
        bold_signif = 0.05, 
        stars = NULL
 ) %>% 
-  set_caption('Comparison of models')
+  set_caption('Comparison of Models 1.0')
 ```
 
-> interpretation of the coefficients of review scores rating and prop_type_simplified with respect to price_for_4_notlog
+### exploring more variables  
 
-## adding more variables  
+Previously, we plotted a correlation matrix to see which variables can be added to our regression model. 
 
 ```{r}
-#
-model3 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates , 
+
+# model 3 = model 2 + beds, baths, bedrooms and no. of guests property can accommodate
+model3 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates, 
              regression_data
             )
 
 model3 %>% tidy(conf.int=TRUE)
-model3 %>% glance()
+model3 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 
-# excluded beds but realised let's keep it
-# model4 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + accommodates , 
-#              regression_data
-#             )
-# 
-# model4 %>% tidy(conf.int=TRUE)
-# model4 %>% glance()
+# using VIF to check for multicollinearity
+vif(model3)
 ```
-> hypothesize that being a super host would significantly impact price of 4 nights 
+In the table above, we can see that VIF for bedrooms, beds and accommodates is high. It is not a problem as such since their VIF is still less than 5 but compared to other variables, higher VIF is expected because more the number of beds and bedrooms, higher the number of guests the property can accommodate. So there is some correlation between these variables.  
+
+**Does price of a property vary significantly if host is a Superhost?**
+
+Superhosts are experienced hosts who are most dedicated to providing outstanding hospitality to their guests. They need to maintain certain standards in response rate, cancellation rate and overall rating to earn this badge. From that perspective, we hypothesize that other factors remaining constant, a Superhost will charge prices higher than the average host. Let's see if that's true.     
 
 ```{r}
-# superhost or not
-model5 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost, 
+
+# model5 = model 4 + superhost status
+model5 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost, 
              regression_data
             )
 
 model5 %>% tidy(conf.int=TRUE)
-model5 %>% glance()
+model5 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+
+
 ```
-> our hypothesis is rejected as the variable is insignificant. drop host_is_superhost, does not matter heheh. add some logic as to why people visiting Beijing don't care if their host is a superhost. 
+> Our hypothesis seems to be true; `host_is_superhost` is significant as per its t-stat and p-value. One can expect the price for a Superhost's property to be higher than an average host's property by 0.062%   
+
+**Is Location Exact?**
+
+Some hosts specify the exact location of their property; let's see if that has any effect on the price for 4 nights.
 
 ```{r}
-# We know that superhost is not relevant, however, is it relevant if its intertwined with the number of reviews?
-model6 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost*number_of_reviews, 
+model6 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact, 
              regression_data
             )
 
 model6 %>% tidy(conf.int=TRUE)
-model6 %>% glance()
+model6 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 ```
-> Nope
+
+Well, the variable `is_location_exact` seems to be significant as per its t-stat and p-value however the negative coefficient is surprising. Maybe that has something to do - not with whether the location specified is exact, but with what the location is!
+
+For this purpose, let us include neighbourhood location into our regression model. To make things simple, we created a new variable called `neighbourhood_simplified` which groups different listings into broader categories or rings. **??????????????????**
 
 ```{r}
-# We know that superhost is not relevant, however, is it relevant if its intertwined with the review ratings?
-model7 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost*review_scores_rating, 
-             regression_data
-            )
+
+# adding neighbourhood location 
+model7 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost + 
+               is_location_exact + neighbourhood_simplified,
+              regression_data
+             )
 
 model7 %>% tidy(conf.int=TRUE)
-model7 %>% glance()
-```
-> Nope
+model7 %>% glance() %>% 
+  kbl () %>% 
+  kable_styling()
 
-next variable 
+```
+`neighbourhood_simplified` is a dummy variable as it has 5 categories - Ring 2, Ring 3, Ring 4, Ring 5 and Ring 6. 
+**PLEASE INTERPRET THIS MORE THANKS**
+
+With inclusion of these location variables, our adjusted R-squared has increased to 0.492. Let's continue to improve our model further. From the perspective of a host who is setting prices in accordance with the time, money and effort he spends in managing the property, and from the perspective of a traveler who is booking the Airbnb and paying that price, some other variables worth considering are - 
+
+1. cancellation policy
+2. review scores specifically for cleanliness
+3. security deposit amount
+4. whether the property is instant bookable
 
 ```{r}
-model8 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact, 
+
+model8 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified + cancellation_policy,
              regression_data
             )
 
 model8 %>% tidy(conf.int=TRUE)
-model8 %>% glance()
+model8 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 ```
+> Cancellation policy 
 
-We now add the neighbourhood element
 
 ```{r}
-model9 <- lm(price_4_night ~ 
-               prop_type_simplified + 
-               number_of_reviews + 
-               review_scores_rating + 
-               room_type + 
-               bedrooms + 
-               bathrooms + 
-               beds + 
-               accommodates + 
-               is_location_exact + 
-               neighbourhood_simplified,
-              regression_data
-             )
+
+model9 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+              is_location_exact + neighbourhood_simplified + review_scores_cleanliness, 
+             regression_data
+            )
 
 model9 %>% tidy(conf.int=TRUE)
-model9 %>% glance()
-
+model9 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 ```
-
-We now add the cancellation policy stuff
+> Cleanliness score - significant, but AIC and BIC is higher compared to when we use cancellation policy
 
 ```{r}
-model10 <- lm(price_4_night ~ 
-                prop_type_simplified + 
-                number_of_reviews + 
-                review_scores_rating + 
-                room_type + 
-                bedrooms + 
-                bathrooms + 
-                beds + 
-                accommodates + 
-                is_location_exact +
-                neighbourhood_simplified +
-                cancellation_policy,
-                regression_data
+
+model10 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  instant_bookable,
+             regression_data
             )
 
 model10 %>% tidy(conf.int=TRUE)
-model10 %>% glance()
-```
-> Cancelation policy does not seem to significantly affect the price
+model10 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 
-```{r}
-huxreg(model3, model5, model8, model10,
-       statistics = c('#observations' = 'nobs', 
-                      'R squared' = 'r.squared', 
-                      'Adj. R Squared' = 'adj.r.squared', 
-                      'Residual SE' = 'sigma'), 
-       bold_signif = 0.05, 
-       stars = NULL
-) %>% 
-  set_caption('Comparison of models')
 ```
+> not significant. t stat is low
 
 ```{r}
 
-# regression_data %>% 
-#   select(c(price_4_nights, 
-#            review_scores_cleanliness, security_deposit)) %>% 
-# ggpairs()
-
-model11 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy + review_scores_cleanliness, 
+# using security deposit normally here
+model11 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  security_deposit,
              regression_data
             )
 
 model11 %>% tidy(conf.int=TRUE)
-model11 %>% glance()
+model11 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
 
-model12 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + cancellation_policy + instant_bookable,
+# using log of security deposit instead as it is a highly skewed variable
+model12 <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  log(security_deposit + 0.001),
              regression_data
             )
 
 model12 %>% tidy(conf.int=TRUE)
-model12 %>% glance()
+model12 %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+```
+> log is better because lower AIC and BIC, and higher adjusted R-squared
 
-model13 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type + bedrooms + bathrooms + beds + accommodates + is_location_exact + security_deposit,
-             regression_data
-            )
-
-model13 %>% tidy(conf.int=TRUE)
-model13 %>% glance()
-
-#################
-huxreg(model11, model12, model13,
+```{r}
+# summary table to compare last few models
+huxreg(model8, model9, model10, model11, model12,
        statistics = c('#observations' = 'nobs', 
                       'R squared' = 'r.squared', 
                       'Adj. R Squared' = 'adj.r.squared', 
@@ -711,28 +740,40 @@ huxreg(model11, model12, model13,
        bold_signif = 0.05, 
        stars = NULL
 ) %>% 
-  set_caption('Comparison of models')
+  set_caption('Comparison of Models 3.0')
 
-# 
-
-car::vif(model1)
-car::vif(model2)
-car::vif(model13)
 
 ########### https://www.displayr.com/variance-inflation-factors-vifs/ USE THIS TO EXPLAIN - ex: beds/baths/accommodates - but none of the VIFs is high enough to suggest collinearity so we're good
 
 ```
-
-
-## Diagnostics, collinearity, summary tables
+> **Conclusion** : should definitely include `log(security_deposit)` 
 
 ```{r}
 
-autoplot(model1)
+final_model <- lm(price_4_nights ~ 
+               prop_type_simplified + number_of_reviews + review_scores_rating + 
+               room_type + bedrooms + bathrooms + beds + accommodates + host_is_superhost +
+               is_location_exact + neighbourhood_simplified +  
+               cancellation_policy + log(security_deposit + 0.001),
+             regression_data
+            )
+
+final_model %>% tidy(conf.int=TRUE)
+final_model %>% glance() %>% 
+  kbl() %>% 
+  kable_styling()
+
+vif(final_model)
+```
+
+### Diagnostics, collinearity, summary tables
+
+```{r}
+
+autoplot(final_model)
 
 ```
 
-```{r}
 
 reading_week <- regression_data %>% 
   filter(prop_type_simplified=="Apartment", 
