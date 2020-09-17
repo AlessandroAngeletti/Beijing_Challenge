@@ -113,9 +113,7 @@ Since this is a large data set with a lot going on, we will compute some summary
            security_deposit,
            review_scores_cleanliness,
            instant_bookable,
-           is_business_travel_ready
-           )
-         ) %>% 
+           is_business_travel_ready)) %>% 
 
   #Removing dollar signs and changing into numerical variables
   
@@ -192,7 +190,8 @@ skim(cleaning_fee) %>%
 # Using patchwork to create a visualization of density for all numerical variables
 p1 <- ggplot(data = data_cleaned, aes(x = price)) +
   geom_density() +
-  theme_bw()
+  theme_bw() +
+  labs(title = "Variability of Price", subtitle = "Difficult to read due to outliers with high prices", x = "Price ($)", y = "Density")
 ```
 
 Before creating plots for all other numerical variables, let's check the readability
@@ -208,58 +207,83 @@ p1a <- ggplot(data = data_cleaned, aes(x = price)) +
   #Here we add a limit to the x-axis, where the maximum value is 10000. We add this to most of the plots, where necessary
   
   xlim(0, 10000) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Price $", x = "", y = "") +
+  theme(plot.title = element_text(size = 8))
 
 p2a <- ggplot(data = data_cleaned, aes(x = cleaning_fee)) +
   geom_density() +
   xlim(0, 300) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Cleaning Fee $", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p3a <- ggplot(data = data_cleaned, aes(x = guests_included)) +
+p5a <- ggplot(data = data_cleaned, aes(x = guests_included)) +
   geom_density() +
   xlim(0, 8) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "Guests Included", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p4a <- ggplot(data = data_cleaned, aes(x = extra_people)) +
+p3a <- ggplot(data = data_cleaned, aes(x = extra_people)) +
   geom_density() +
   xlim(0, 400) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "Extra People Fee $", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p5a <- ggplot(data = data_cleaned, aes(x = number_of_reviews)) +
+p10a <- ggplot(data = data_cleaned, aes(x = number_of_reviews)) +
   geom_density() +
   xlim(0, 100) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Reviews", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p6a <- ggplot(data = data_cleaned, aes(x = review_scores_rating)) +
+p11a <- ggplot(data = data_cleaned, aes(x = review_scores_rating)) +
   geom_density() +
   xlim(0, 100) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Review Ratings", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p7a <- ggplot(data = data_cleaned, aes(x = minimum_nights)) +
+p9a <- ggplot(data = data_cleaned, aes(x = minimum_nights)) +
   geom_density() +
   xlim(0, 150) +
-  theme_bw() 
+  theme_bw() +
+  labs(title = "Minimum Night Stay", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p8a <- ggplot(data = data_cleaned, aes(x = accommodates)) +
+p4a <- ggplot(data = data_cleaned, aes(x = accommodates)) +
   geom_density() +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. Accomodated", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p9a <- ggplot(data = data_cleaned, aes(x = beds)) +
+p7a <- ggplot(data = data_cleaned, aes(x = beds)) +
   geom_density() +
   xlim(0, 20) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Beds", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p10a <- ggplot(data = data_cleaned, aes(x = bathrooms)) +
+p8a <- ggplot(data = data_cleaned, aes(x = bathrooms)) +
   geom_density() +
   xlim(0, 20) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Bathrooms", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p11a <- ggplot(data = data_cleaned, aes(x = bedrooms)) +
+p6a <- ggplot(data = data_cleaned, aes(x = bedrooms)) +
   geom_density() +
   xlim(0, 15) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "No. of Bedrooms", x = "", y = "")+
+  theme(plot.title = element_text(size = 8))
 
-p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a
+p1a + p2a + p3a + p4a + p5a + p6a + p7a + p8a + p9a + p10a + p11a +
+  plot_annotation(title = "Variability in Numerical Variables", subtitle = "Majority of numerical variables are highly right-skewed")
+ 
+  
 ```
 
 ```{r, fig.width=15, fig.height=15}
