@@ -75,11 +75,12 @@ data <- vroom::vroom("listings.csv.gz") %>%
 glimpse(data)
 ```
 
-From this output we can see that we have
-+ just over 36 thousand observations (or Airbnb listings) in Beijing in the data set
-+ 106 different variables included in the data
-+ these variables are a mixture of 'double', 'character', 'logic' and 'date'
-+ straightaway we can see that some of our 'price' variables include dollar signs ($) and are down as 'character' variables rather than 'double' variables
+From this output we can see that we have:
+
+*just over 36 thousand observations (or Airbnb listings) in Beijing in the data set
+*106 different variables included in the data
+*these variables are a mixture of 'double', 'character', 'logic' and 'date'
+*straightaway we can see that some of our 'price' variables include dollar signs ($) and are down as 'character' variables rather than 'double' variables
 
 Since this is a large data set with a lot going on, we will compute some summary statistics on key variables
 
