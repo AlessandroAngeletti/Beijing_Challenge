@@ -428,6 +428,7 @@ favstats(data = cleaning , ~ minimum_nights) %>%
 ## Creating Variable to Model
 
 ```{r, Options(scipen = 999), fig.width=10, fig.height =15}
+neighbourhoodring <- vroom::vroom("neighbourhoodring.csv")
 
 regression_data <-  cleaning %>% 
   # New variable that computes the price of 2 people sleeping in a ... for 4 nights
@@ -437,29 +438,19 @@ regression_data <-  cleaning %>%
     price_4_nights = case_when(guests_included < 2 ~ cleaning_fee + (4 * (price + extra_people)),
                                TRUE ~ cleaning_fee + (4 * price)),
     price_4_night = log(price_4_nights + 0.000000001)  #searchable
-  )
-
-regression_data
-
-neighbourhoodring <- vroom::vroom("neighbourhoodring.csv")
-
-regression_data %>% 
+  ) %>% 
+  
   #New variable that classifies neighborhood into 5 areas according to Beijing's geographical characteristic
-  #The 5 areas are Ring 2-6
-  mutate(neighbourhood_simplified = neighbourhoodring$Ring[match(neighbourhood, neighbourhoodring$neighbourhood)]) 
-
-regression_data
-#  left_join(., neighbourhoodring, by = "neighbourhood", copy = TRUE)
+  #The 5 areas are Ring 2-6  left_join(., neighbourhoodring, by = "neighbourhood", copy = TRUE) %>% 
   mutate(
     neighbourhood_simplified = case_when(
-      neighbourhood = c("",) ~ "Zone 2"
-      neighbourhood = c("",) ~ "Zone 3"
-      neighbourhood = c("",) ~ "Zone 4"
-      neighbourhood = c("",) ~ "Zone 5"
-      TRUE ~ "Zone 6"
-    )
-  )
-  
+      Ring == "2" ~ "Ring 2",
+      Ring == "3" ~ "Ring 3",
+      Ring == "4" ~ "Ring 4",
+      Ring == "5" ~ "Ring 5",
+      TRUE ~ "Ring 6"
+    )) %>% 
+  subset(., select = -Ring)
   
 # ggplot for price_4_nights
 ggplot(data = regression_data, aes(x = price_4_nights)) +
